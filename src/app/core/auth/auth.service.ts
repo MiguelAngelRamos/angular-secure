@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthResponse, AuthUser } from '../models/auth.models';
-import { BehaviorSubject, finalize, Observable, shareReplay, tap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, Observable, of, shareReplay, tap, timeout } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -53,14 +53,49 @@ export class AuthService {
           this.refreshRequest$ = null; // una vez que la petición se completa, se resetea la variable para permitir futuras peticiones de refresh
           this._isRefreshing$.next(false); // indica que ya no se está haciendo una petición de refresh
         }),
+        // bufferSize: 1 retiene la ultima emision para nuevos subscriptores
+        // refCount: true hace que el observable subyacente solo se mantenga vivo mientras hay el menos un suscriptor
+        //* Comparte la misma respuesta entre multiples subscriptores y evita repetir la peticion si ya se ha hecho
         shareReplay({bufferSize: 1, refCount: true}) // esto es para compartir la misma respuesta entre todas las suscripciones que se hagan mientras la petición está en curso, evitando así hacer múltiples peticiones de refresh si varios componentes se montan al mismo tiempo y detectan que el token ha expirado
       )
 
       return this.refreshRequest$;
   }
 
+  /*
+  * logout() debe hacer 3 cosas en el orden de importancia:
+   1. Avisar al backend que invalide el token de la sesión (POST /auth/logout)
+   2. Limpiar el estado loal y redirigir al login (siempre, pase lo que pase)
+   3. Devolver Observable<void> para que el componente que llama pueda subscribirse y saber cuando termino
+
+   **El truco** está en que la limpieza local debe ocurrir SIEMPRE, aunque el backend falle, tarde demasiado, o este caido. por eso se usa esta adena de opertadores.
+  */
+  logout(): Observable<void> {
+    const token = this._accessToken();
+    if(!token) {
+      this.clearSessionAndRedirect();
+      return of(void 0);
+    }
+
+    return this.http.post('/api/v1/auth/logout', {}, { headers:{ Authorization: `Bearer ${token}` }, withCredentials: true })
+      .pipe(
+        timeout({each: 3000}),
+        catchError(() => of(void 0)), // Si la petición de logout falla por cualquier motivo (timeout, error de red, etc), igual se limpia la sesión y se redirige al login, porque el token ya no es válido o va a expirar pronto, así que no tiene sentido mantenerlo en el cliente
+        finalize(() => this.clearSessionAndRedirect()), // una vez que la petición se completa (ya sea por éxito o por error), se limpia la sesión y se redirige al login
+        tap(() => void 0) // esto es para transformar el resultado a void, ya que el backend no devuelve nada relevante en la respuesta de logout, y así el componente que llama solo recibe un Observable<void> sin necesidad de preocuparse por el tipo de respuesta del backend
+      ) as Observable<void>;
+  }
+
+
+
   private setSession(authResponse: AuthResponse): void {
     this._accessToken.set(authResponse.accessToken);
     this._currentUser.set(authResponse.user);
+  }
+
+  clearSessionAndRedirect(): void {
+    this._accessToken.set(null);
+    this._currentUser.set(null);
+    this.router.navigate(['/login']);
   }
 }
