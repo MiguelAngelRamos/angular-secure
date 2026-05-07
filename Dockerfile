@@ -1,19 +1,15 @@
-# Patrón Multi-Stage
-#  Patrón: multi-stage build (3 etapas).
-#    1) deps     → instala TODAS las dependencias (incluye dev) con build tools
-#                  necesarios para compilar argon2 (dependencia nativa).
-#    2) builder  → compila el código TypeScript → JavaScript en /dist.
-#    3) runner   → imagen FINAL mínima, con solo dependencias de producción y
-#                  ejecutándose como usuario sin privilegios.
+# PATRÓN MILTI-STAGE (varias etapas)
+# Etapa Build:
+# Node, pnpm y todo el código fuente para compilar la aplicación
 #! No pineada (móvil)
-FROM node:21-alpine as builder
+FROM node:22-alpine AS builder
 
-#! No pineada (latest)
+# Activar pnpm con versión específica (evita descarga dinámica)
 RUN corepack enable \
-  && corepack prepare pnpm@latest --activate
+ && corepack prepare pnpm@9.15.0 --activate
 
 USER node
-
+# Establecemos el directorio de trabajo dentro del contenedor
 WORKDIR /home/node/app
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
@@ -21,16 +17,20 @@ COPY --chown=node:node package.json pnpm-lock.yaml ./
 RUN pnpm config set ignore-scripts true \
  && pnpm install --frozen-lockfile --prefer-offline
 
+## Ahora copiar el resto código fuente (lo que .dockerignore no excluye)
+## . (destino: WORKDIR actual /home/node/app)
+## . (origen: la raiz del contexto del build (tu carpeta del proyecto))
 COPY --chown=node:node . .
 
 RUN pnpm run build --configuration=production
 
+## Serve (servir archivos estáticos con un servidor web ligero)
 #! No pineada (móvil)
-FROM nginx:1.27-alpine as runner
+FROM nginx:1.27-alpine AS runner
+
 LABEL org.opencontainers.image.source="https://github.com/MiguelAngelRamos/angular-secure" \
       org.opencontainers.image.title="clinic-frontend" \
       org.opencontainers.image.description="Angular 21 SPA"
-
 
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY --from=builder /home/node/app/dist/angularsecure/browser /usr/share/nginx/html
@@ -43,6 +43,7 @@ RUN chmod -R 555 /usr/share/nginx/html \
   && touch /var/run/nginx.pid \
   && chown nginx:nginx /var/run/nginx.pid
 
+## Seguridad ejecutar usuario no root para servir la aplicación
 USER nginx
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
