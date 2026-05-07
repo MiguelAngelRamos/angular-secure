@@ -30,7 +30,7 @@ FROM nginx:1.27-alpine AS runner
 
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY --from=builder /home/node/app/dist/angularsecure /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/app.conf
 
 RUN chmod -R 555 /usr/share/nginx/html \
   && chown -R nginx:nginx /var/cache/nginx \
