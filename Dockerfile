@@ -8,15 +8,15 @@
 #! No pineada (móvil)
 FROM node:21-alpine as builder
 
+#! No pineada (latest)
+RUN corepack enable \
+  && corepack prepare pnpm@latest --activate
+
 USER node
 
 WORKDIR /home/node/app
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
-
-#! No pineada (latest)
-RUN corepack enable \
-  && corepack prepare pnpm@latest --activate
 
 RUN pnpm config set ignore-scripts true \
  && pnpm install --frozen-lockfile --prefer-offline
