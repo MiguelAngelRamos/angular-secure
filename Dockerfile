@@ -39,7 +39,9 @@ COPY nginx.conf /etc/nginx/conf.d/app.conf
 RUN chmod -R 555 /usr/share/nginx/html \
   && chown -R nginx:nginx /var/cache/nginx \
   && chown -R nginx:nginx /var/log/nginx \
-  && chown nginx:nginx /etc/nginx/conf.d/app.conf
+  && chown nginx:nginx /etc/nginx/conf.d/app.conf \
+  && touch /var/run/nginx.pid \
+  && chown nginx:nginx /var/run/nginx.pid
 
 ## Seguridad ejecutar usuario no root para servir la aplicación
 USER nginx
