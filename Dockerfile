@@ -7,6 +7,8 @@ FROM node:22-alpine AS builder
 # -- Seguridad principio de menor privilegio
 # No ejecutamos comandos como root. Si una dependencia maliciosa o un script
 # post-install se ejecuta durante el build, quedaria limitado al usuario "node" que no tiene permisos de administrador.
+RUN corepack enable
+
 USER node
 
 # Establecemos el directorio de trabajo dentro del contenedor
@@ -14,7 +16,7 @@ WORKDIR /home/node/app
 
 COPY --chown=node:node package.json pnpm-lock.yaml ./
 
-RUN corepack enable && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 ## Ahora copiar el resto código fuente (lo que .dockerignore no excluye)
 ## . (destino: WORKDIR actual /home/node/app)
 ## . (origen: la raiz del contexto del build (tu carpeta del proyecto))
