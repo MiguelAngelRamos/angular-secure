@@ -33,8 +33,6 @@ COPY --from=builder /home/node/app/dist/angularsecure /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 RUN chmod -R 555 /usr/share/nginx/html \
-    # El proceso de Nginx (worker) necesita escribir en cache y logs.
-    # Damos permisos solo a esos directorios al usuario "nginx".
     && chown -R nginx:nginx /var/cache/nginx \
     && chown -R nginx:nginx /var/log/nginx \
     && chown nginx:nginx /etc/nginx/conf.d/app.conf
