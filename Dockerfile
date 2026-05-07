@@ -33,7 +33,7 @@ LABEL org.opencontainers.image.source="https://github.com/MiguelAngelRamos/angul
       org.opencontainers.image.description="Angular 21 SPA"
 
 RUN rm -f /etc/nginx/conf.d/default.conf
-COPY --from=builder /home/node/app/dist/angularsecure /usr/share/nginx/html
+COPY --from=builder /home/node/app/dist/angularsecure/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/app.conf
 
 RUN chmod -R 555 /usr/share/nginx/html \
