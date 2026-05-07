@@ -33,14 +33,14 @@ COPY --from=builder /home/node/app/dist/angularsecure /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 RUN chmod -R 555 /usr/share/nginx/html \
-    && chown -R nginx:nginx /var/cache/nginx \
-    && chown -R nginx:nginx /var/log/nginx \
-    && chown nginx:nginx /etc/nginx/conf.d/app.conf
+  && chown -R nginx:nginx /var/cache/nginx \
+  && chown -R nginx:nginx /var/log/nginx \
+  && chown nginx:nginx /etc/nginx/conf.d/app.conf
 
 ## Seguridad ejecutar usuario no root para servir la aplicación
 USER nginx
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:8080/ || exit 1
+  CMD wget -qO- http://localhost:8080/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
