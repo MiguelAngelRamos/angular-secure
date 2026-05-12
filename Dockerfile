@@ -1,4 +1,4 @@
-# PATRÓN MILTI-STAGE (varias etapas)
+# PATRÓN MULTI-STAGE (varias etapas)
 # Etapa Build:
 # Node, pnpm y todo el código fuente para compilar la aplicación
 #! No pineada (móvil)
